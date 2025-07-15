@@ -1,0 +1,284 @@
+/* --- メイン中央固定、背景に対するレイアウト調整 --- */
+main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  height: 100vh;
+  max-width: 720px; /* ← 860pxはやや広すぎた */
+  width: 100%;
+  margin: auto;
+  position: relative;
+  z-index: 10;
+}
+
+/* --- 全体の白枠・透明感・角丸・シャドウ --- */
+.main-box {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 1rem;
+  padding: 2rem;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+/* プロフィール画像 */
+.main-box img.rounded-full {
+  width: 128px;
+  height: 128px;
+  object-fit: cover;
+  border: 2px solid white;
+  box-shadow: 0 0 8px rgba(255,255,255,0.3);
+  margin-bottom: 0.75rem;
+}
+
+/* 名前と説明 */
+.main-box h2 {
+  font-size: 2rem; /* ← 大きめに */
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.main-box p {
+  color: #ccc;
+  font-size: 1.125rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+/* SNSアイコン丸型ボタン */
+.main-box ul {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin: 1rem 0;
+}
+
+.main-box ul li {
+  position: relative;
+}
+
+.main-box ul li a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 9999px;
+  border: 2px solid white;
+  background-color: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.main-box ul li a svg {
+  width: 24px;
+  height: 24px;
+  fill: white;
+  filter: drop-shadow(0 0 3px white);
+}
+
+.main-box ul li a:hover {
+  filter: brightness(0.6);
+}
+
+/* ホバーで出てくるラベル */
+.main-box ul li::after {
+  content: attr(data-label);
+  position: absolute;
+  top: 3.5rem;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 4px 10px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  border-radius: 0.25rem;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: all 0.2s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.main-box ul li:hover::after {
+  opacity: 1;
+  transform: scale(1) translateY(4px);
+}
+
+/* Divider Line */
+.main-box .my-3 {
+  background-color: rgba(255, 255, 255, 0.3);
+  height: 1px;
+}
+
+/* VRChatリンク */
+.main-box .text-center p {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.main-box .text-center a {
+  display: inline-block;
+  color: #ccc;
+  font-size: 0.875rem;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  text-decoration: underline;
+}
+
+/* Audio Player */
+.main-box audio {
+  width: 100%;
+  margin-top: 0.5rem;
+  filter: brightness(1.2);
+}
+
+/* Extra Linksカード風スタイル */
+.extra-links {
+  text-align: center;
+  color: #eee;
+}
+
+.extra-link-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(3px);
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.extra-link-card.horizontal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: row;
+  text-align: left;
+}
+
+.extra-link-card.horizontal .text {
+  display: flex;
+  flex-direction: column;
+  margin-right: 1rem;
+}
+
+
+.extra-link-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.extra-link-card .text {
+  padding-left: 0.75rem; /* 12px 相当 */
+}
+
+.extra-link-card .label {
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.extra-link-card .url {
+  font-size: 0.75rem;
+  color: #ccc;
+  white-space: normal;
+  word-break: break-all;
+  display: block;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* .extra-link-card .booth-logo {
+  height: 40px;
+  object-fit: contain;
+} */
+
+.booth-banner-wrapper {
+  position: relative;
+  width: 200px;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  min-width: 200px;
+  margin-left: -8px;
+}
+
+.booth-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 40px;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.booth-logo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 40px;
+  object-fit: contain;
+  z-index: 1;
+}
+
+.background {
+  position: absolute;
+  display: block;
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
+
+.fade-bg {
+  transition: opacity 1s ease-in-out;
+  opacity: 1;
+}
+
+.fade-out {
+  opacity: 0;
+}
+
+#main-content {
+  display: none;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+#loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #f7f0ff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  transition: transform 1.5s ease-in-out;
+}
+
+.icon {
+  width: 80px;
+  height: 80px;
+  opacity: 0;
+  animation: pop 0.3s ease-out 0.7s forwards;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1.2); opacity: 1; }
+}

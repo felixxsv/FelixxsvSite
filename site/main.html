@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Homepage</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="js/script.js"></script>
+</head>
+<body class="bg-black">
+  <div id="loading-screen">
+    <div class="icon">
+      <img src="img/icon/WolfLogoNOBG.png" alt="icon" class="icon" />
+    </div>
+  </div>
+  <aside style="background-color:#101013;filter:blur(0px) brightness(50%);-webkit-filter:blur(0px) brightness(50%)" class="fixed w-screen h-screen z-[-5] duration-500 fade-in">
+    <img id="background-image" draggable="false" src="" class="fade-bg object-cover h-full w-full object-center md:object-center sm:object-top">
+  </aside>
+  <main class="flex min-h-screen py-8 duration-500" id="main-content">
+    <h1 style="color:#ffffff" class="hidden font-semibold text-3xl">Click Anywhere</h1>
+    <div class="max-w-[42rem] w-full m-auto px-4">
+      <div style="will-change: transform; transition: 400ms cubic-bezier(0.03, 0.98, 0.52, 0.99); transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1);">
+        <div class="relative" style="border-radius: 0.4rem; backdrop-filter: blur(0px); transform: translateY(0px); opacity: 1;">
+          <div class="main-box tilt">
+            <!-- Profile Section -->
+            <div class="flex flex-col items-center">
+              <img src="img/icon/VRChat_2024-12-22_20-41-00.313_1920x1080_icon.png" class="h-[120px] w-[120px] rounded-full border-2 border-white" alt="Profile Image">
+              <h2 class="text-white mt-2 text-2xl font-bold">Felix</h2>
+              <p class="text-white text-sm">ITが好き / 旅人 / 道民</p>
+            </div>
+
+            <!-- SNS Links -->
+            <ul class="flex justify-center gap-4 mt-4">
+                <li data-label="X">
+                    <a href="https://x.com/felix_x217" target="_blank" class="text-white hover:underline">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932Z" />
+                        </svg>
+                    </a>
+                </li>
+                <li data-label="Spotify">
+                    <a href="https://open.spotify.com/user/ddkmxdjro0k59hccp81a17xac?si=2c47247d302d44dc" target="_blank" class="text-white hover:underline">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                        </svg>
+                    </a>
+                </li>
+                <li data-label="GitHub">
+                    <a href="https://github.com/felixxsv" target="_blank" class="text-white hover:underline">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M12 0C5.37 0 0 5.373 0 12c0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577v-2.256c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.085 1.84 1.236 1.84 1.236 1.07 1.834 2.809 1.304 3.495.997.108-.775.42-1.305.763-1.605-2.665-.3-5.466-1.334-5.466-5.931 0-1.31.47-2.38 1.236-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.3 1.23.957-.266 1.984-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.289-1.552 3.294-1.23 3.294-1.23.654 1.653.243 2.873.12 3.176.77.84 1.233 1.91 1.233 3.22 0 4.609-2.804 5.628-5.475 5.921.43.37.815 1.102.815 2.222v3.293c0 .322.216.694.825.576C20.565 21.796 24 17.303 24 12c0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Divider -->
+            <div class="my-3 w-full" style="background-color: rgb(255, 255, 255); height: 2px; opacity: 1;"></div>
+
+            <!-- External Links / VRChatなど -->
+            <div class="extra-links mt-6 space-y-3">
+              <a href="https://felixxsv.booth.pm" class="flex justify-between items-center px-4 py-2 rounded-md border border-gray-500 bg-[#1a1a1a] text-white w-full no-underline hover:bg-[#2a2a2a]">
+                <div class="text-left">
+                  <div class="font-bold text-sm">Booth Shop</div>
+                  <div class="text-xs text-gray-300">felixxsv.booth.pm</div>
+                </div>
+                <span class="text-white text-lg ml-4">→</span>
+              </a>
+
+              <a href="https://vrchat.com/home/user/usr_b8e54252-4d24-482a-b227-52ffab16ce19" class="flex justify-between items-center px-4 py-2 mt-2 rounded-md border border-gray-500 bg-[#1a1a1a] text-white w-full no-underline hover:bg-[#2a2a2a]">
+                <div class="text-left">
+                  <div class="font-bold text-sm">VRChat Profile</div>
+                  <div class="text-xs text-gray-300 break-all">
+                    https://vrchat.com/home/user/usr_b8e54252-4d24-482a-b227-52ffab16ce19
+                  </div>
+                </div>
+                <span class="text-white text-lg ml-4">→</span>
+              </a>
+
+              <a href="https://felixxsv.net/blog" class="flex justify-between items-center px-4 py-2 mt-2 rounded-md border border-gray-500 bg-[#1a1a1a] text-white w-full no-underline hover:bg-[#2a2a2a]">
+                <div class="text-left">
+                  <div class="font-bold text-sm">Felix Blog</div>
+                  <div class="text-xs text-gray-300 break-all">
+                    https://felixxsv.net/blog
+                  </div>
+                </div>
+                <span class="text-white text-lg ml-4">→</span>
+              </a>
+
+            </div>
+
+            <!-- Audio Player -->
+            <!-- <div class="mt-6 text-white text-center">
+              <p class="mb-1 font-semibold">Now Playing</p>
+              <audio controls preload="auto" class="mx-auto">
+                <source src="https://r2-bios.e-z.host/8d7f0b30-be44-4cb5-b21e-d31f3bac177e/wniyoaxfhw.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+              </audio>
+            </div> -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <canvas class="background"></canvas>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/particlesjs/2.2.2/particles.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanilla-tilt@1.7.2/dist/vanilla-tilt.min.js"></script>
+</body>
+</html>
