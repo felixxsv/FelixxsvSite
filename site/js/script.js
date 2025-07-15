@@ -56,6 +56,14 @@ document.addEventListener("DOMContentLoaded", function () {
     reverse: true,
     "max-glare": 0.2
   });
+
+  Particles.init({
+    selector: '.background',
+    sizeVariations: 30,
+    color: [
+      'rgb(220, 220, 220)', 'rgba(226, 226, 226, 0.5)', 'rgba(255, 255, 255, 0.2)'
+    ]
+  });
 });
 
 window.addEventListener('load', () => {
