@@ -50,7 +50,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }, msToNextSlot);
 
   VanillaTilt.init(document.querySelectorAll(".tilt"), {
-    max: 15,
+    max: 6,
     speed: 400,
     glare: true,
     reverse: true,
