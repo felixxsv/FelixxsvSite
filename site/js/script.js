@@ -13,15 +13,15 @@ const bgImages = [
 ];
 
 const VIDEO_SRC = "video/skull-edit1.2.mp4";
-const VIDEO_INTERVAL_MINUTES = 1;
+const VIDEO_INTERVAL_MINUTES = 5;
 const VIDEO_LOOPS = 10;
-const VIDEO_VOLUME = 0.8;
+const VIDEO_VOLUME = 0.35;
 
 let bgImageEl = null;
 let bgVideoEl = null;
 
-let videoCycleStarted = false;
 let audioUnlocked = false;
+let videoCycleStarted = false;
 
 const imageCache = new Map();
 
@@ -32,9 +32,9 @@ const pseudoRandom = (seed) => {
   return x - Math.floor(x);
 };
 
-const getQuarterSlot = (d) => d.getHours() * 4 + Math.floor(d.getMinutes() / 15);
+const quarterSlot = (d) => d.getHours() * 4 + Math.floor(d.getMinutes() / 15);
 
-const getImageBySlot = (slot) => {
+const imageBySlot = (slot) => {
   const idx = Math.floor(pseudoRandom(slot) * bgImages.length);
   return bgImages[idx];
 };
@@ -45,7 +45,6 @@ const preloadImage = (src) => {
   const p = new Promise((resolve) => {
     const img = new Image();
     img.src = src;
-
     const done = () => resolve(src);
 
     if (img.decode) {
@@ -60,41 +59,44 @@ const preloadImage = (src) => {
   return p;
 };
 
-const preloadAllImages = () => {
-  const run = async () => {
-    for (const src of bgImages) {
-      await preloadImage(src);
-      await sleep(0);
-    }
-  };
-
-  if (typeof requestIdleCallback === "function") {
-    requestIdleCallback(() => run());
-  } else {
-    setTimeout(() => run(), 0);
+const preloadAllImages = async () => {
+  for (const src of bgImages) {
+    await preloadImage(src);
+    await sleep(0);
   }
+};
+
+const setInitialBackground = async () => {
+  if (!bgImageEl) return;
+
+  const now = new Date();
+  const slot = quarterSlot(now);
+  const current = imageBySlot(slot);
+  const next = imageBySlot(slot + 1);
+
+  await preloadImage(current);
+  bgImageEl.src = current;
+
+  preloadImage(next);
 };
 
 const updateBackground = async () => {
   if (!bgImageEl) return;
 
   const now = new Date();
-  const slot = getQuarterSlot(now);
-  const currentSrc = getImageBySlot(slot);
-  const nextSrc = getImageBySlot(slot + 1);
+  const slot = quarterSlot(now);
+  const current = imageBySlot(slot);
+  const next = imageBySlot(slot + 1);
 
-  preloadImage(nextSrc);
+  preloadImage(next);
 
   bgImageEl.classList.add("fade-out");
-  await preloadImage(currentSrc);
-
-  bgImageEl.src = currentSrc;
+  await preloadImage(current);
+  bgImageEl.src = current;
   bgImageEl.classList.remove("fade-out");
 };
 
 const scheduleBackgroundUpdates = () => {
-  updateBackground();
-
   const now = new Date();
   const minutes = now.getMinutes();
   const seconds = now.getSeconds();
@@ -115,44 +117,25 @@ const ensureMetadata = (video) =>
     video.addEventListener("loadedmetadata", () => resolve(), { once: true });
   });
 
-const tryPlay = async (video) => {
+const playPromise = (video) => {
   const p = video.play();
-  if (p && p.then) await p;
-  return true;
+  if (p && p.catch) return p;
+  return Promise.resolve();
 };
 
-const tryAutoplayWithSound = async (video) => {
-  video.volume = VIDEO_VOLUME;
-  video.muted = false;
-  try {
-    await tryPlay(video);
-    audioUnlocked = true;
-    video.pause();
-    try {
-      video.currentTime = 0;
-    } catch {}
-    return true;
-  } catch {
-    audioUnlocked = false;
-    video.muted = true;
-    try {
-      await tryPlay(video);
-      video.pause();
-      try {
-        video.currentTime = 0;
-      } catch {}
-    } catch {}
-    return false;
-  }
-};
-
-const unlockAudioByUserGesture = async () => {
-  if (!bgVideoEl) return;
+const unlockAudio = async () => {
+  if (audioUnlocked) return;
   audioUnlocked = true;
+
+  if (!bgVideoEl) return;
+
   bgVideoEl.muted = false;
   bgVideoEl.volume = VIDEO_VOLUME;
+
+  if (!bgVideoEl.paused) return;
+
   try {
-    await tryPlay(bgVideoEl);
+    await playPromise(bgVideoEl);
     bgVideoEl.pause();
     try {
       bgVideoEl.currentTime = 0;
@@ -169,13 +152,9 @@ const playOnceFull = (video) =>
       video.currentTime = 0;
     } catch {}
 
-    try {
-      const p = video.play();
-      if (p && p.catch) {
-        p.catch(() => resolve(false));
-      }
-    } catch {
-      resolve(false);
+    const p = video.play();
+    if (p && p.catch) {
+      p.catch(() => resolve(false));
     }
   });
 
@@ -224,7 +203,6 @@ const startVideoCycle = async () => {
   bgVideoEl.load();
 
   await ensureMetadata(bgVideoEl);
-  await tryAutoplayWithSound(bgVideoEl);
 
   const intervalMs = VIDEO_INTERVAL_MINUTES * 60 * 1000;
   const loops = Math.max(1, parseInt(VIDEO_LOOPS, 10) || 1);
@@ -232,6 +210,7 @@ const startVideoCycle = async () => {
   while (true) {
     await sleep(intervalMs);
     await playVideoLoopsThenHide(loops);
+    await sleep(0);
   }
 };
 
@@ -243,7 +222,18 @@ document.addEventListener("DOMContentLoaded", () => {
   bgImageEl = document.getElementById("background-image");
   bgVideoEl = document.getElementById("background-video");
 
-  scheduleBackgroundUpdates();
+  if (bgVideoEl) {
+    bgVideoEl.style.display = "none";
+    bgVideoEl.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  }
+
+  window.addEventListener("mousemove", unlockAudio, { once: true });
+  window.addEventListener("pointerdown", unlockAudio, { once: true });
+  window.addEventListener("keydown", unlockAudio, { once: true });
+  window.addEventListener("touchstart", unlockAudio, { once: true });
 
   try {
     VanillaTilt.init(document.querySelectorAll(".tilt"), {
@@ -262,36 +252,26 @@ document.addEventListener("DOMContentLoaded", () => {
       color: ["rgb(220, 220, 220)", "rgba(226, 226, 226, 0.5)", "rgba(255, 255, 255, 0.2)"]
     });
   } catch {}
-
-  const unlock = () => unlockAudioByUserGesture();
-  window.addEventListener("pointerdown", unlock, { once: true });
-  window.addEventListener("keydown", unlock, { once: true });
-  window.addEventListener("touchstart", unlock, { once: true });
 });
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
   const hasSession = localStorage.getItem("hasSession");
   const loading = document.getElementById("loading-screen");
   const main = document.getElementById("main-content");
 
-  preloadAllImages();
-
-  const warmup = async () => {
-    const now = new Date();
-    const slot = getQuarterSlot(now);
-    await preloadImage(getImageBySlot(slot));
-    preloadImage(getImageBySlot(slot + 1));
-  };
-
   const showMain = async () => {
-    await Promise.race([warmup(), sleep(2500)]);
+    await setInitialBackground();
+    preloadAllImages();
+    scheduleBackgroundUpdates();
+
     if (loading) loading.style.display = "none";
     if (main) main.style.display = "flex";
+
     startVideoCycle();
   };
 
   if (hasSession) {
-    showMain();
+    await showMain();
     return;
   }
 
