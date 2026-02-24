@@ -128,6 +128,9 @@ main {
   text-decoration: underline;
 }
 
+#background-image { opacity: 0; }
+#background-image.is-ready { opacity: 1; }
+
 /* Audio Player */
 .main-box audio {
   width: 100%;
