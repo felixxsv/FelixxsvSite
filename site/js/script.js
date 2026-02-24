@@ -17,7 +17,7 @@
 
   const VIDEO_SCHEDULES = [
     { time: "4:44", loops: 10 },
-    { time: "0:12", loops: 10 }
+    { time: "0:14", loops: 10 }
   ];
 
   const pseudoRandom = (seed) => {
@@ -122,7 +122,7 @@
     bgVideo.preload = "auto";
     bgVideo.playsInline = true;
     bgVideo.loop = false;
-    bgVideo.volume = 1.0;
+    bgVideo.volume = 0.8;
     bgVideo.muted = true;
     bgVideo.style.display = "none";
     bgVideo.load();
@@ -132,7 +132,7 @@
       audioUnlocked = true;
       if (bgVideo.style.display !== "none") {
         bgVideo.muted = false;
-        bgVideo.volume = 1.0;
+        bgVideo.volume = 0.8;
         safePlay(bgVideo);
       }
     };
