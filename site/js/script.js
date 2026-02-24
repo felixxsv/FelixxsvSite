@@ -19,15 +19,6 @@ const VIDEO_VOLUME = 0.2;
 
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-let bgImageEl = null;
-let bgVideoEl = null;
-
-let audioUnlocked = false;
-let audioUnlockRequested = false;
-let videoCycleStarted = false;
-
-const imageCache = new Map();
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const pseudoRandom = (seed) => {
@@ -42,19 +33,23 @@ const imageBySlot = (slot) => {
   return bgImages[idx];
 };
 
+const imageCache = new Map();
+
 const preloadImage = (src) => {
   if (imageCache.has(src)) return imageCache.get(src);
 
   const p = new Promise((resolve) => {
     const img = new Image();
+
+    const doneOk = () => resolve(true);
+    const doneNg = () => resolve(false);
+
+    img.onload = doneOk;
+    img.onerror = doneNg;
     img.src = src;
-    const done = () => resolve(src);
 
     if (img.decode) {
-      img.decode().then(done).catch(done);
-    } else {
-      img.onload = done;
-      img.onerror = done;
+      img.decode().then(doneOk).catch(() => {});
     }
   });
 
@@ -62,25 +57,43 @@ const preloadImage = (src) => {
   return p;
 };
 
-const preloadAllImages = async () => {
-  for (const src of bgImages) {
-    await preloadImage(src);
-    await sleep(0);
-  }
-};
+let bgImageEl = null;
+let bgVideoEl = null;
 
-const setInitialBackground = async () => {
-  if (!bgImageEl) return;
+let initialBgSrc = null;
+let initialBgReady = null;
 
+let wantSound = false;
+let strongGesture = false;
+
+let videoCycleStarted = false;
+let videoSessionActive = false;
+
+const decideInitialBg = () => {
   const now = new Date();
   const slot = quarterSlot(now);
   const current = imageBySlot(slot);
   const next = imageBySlot(slot + 1);
-
-  await preloadImage(current);
-  bgImageEl.src = current;
-
+  initialBgSrc = current;
+  initialBgReady = preloadImage(current);
   preloadImage(next);
+};
+
+decideInitialBg();
+
+const applyInitialBackground = async () => {
+  if (!bgImageEl) return false;
+
+  const ok = await initialBgReady;
+  if (ok) {
+    bgImageEl.classList.remove("fade-out");
+    bgImageEl.src = initialBgSrc;
+    bgImageEl.style.opacity = "1";
+    return true;
+  }
+
+  bgImageEl.style.opacity = "1";
+  return false;
 };
 
 const updateBackground = async () => {
@@ -93,8 +106,11 @@ const updateBackground = async () => {
 
   preloadImage(next);
 
+  const ok = await preloadImage(current);
+  if (!ok) return;
+
   bgImageEl.classList.add("fade-out");
-  await preloadImage(current);
+  await sleep(10);
   bgImageEl.src = current;
   bgImageEl.classList.remove("fade-out");
 };
@@ -114,96 +130,91 @@ const scheduleBackgroundUpdates = () => {
   }, msToNextSlot);
 };
 
+const preloadAllImages = async () => {
+  for (const src of bgImages) {
+    preloadImage(src);
+    await sleep(0);
+  }
+};
+
 const ensureMetadata = (video) =>
   new Promise((resolve) => {
     if (video.readyState >= 1 && Number.isFinite(video.duration) && video.duration > 0) return resolve();
     video.addEventListener("loadedmetadata", () => resolve(), { once: true });
   });
 
-const playPromise = (video) => {
+const safePlay = async (video) => {
   const p = video.play();
-  if (p && p.catch) return p;
-  return Promise.resolve();
+  if (p && p.catch) {
+    await p;
+    return true;
+  }
+  return true;
 };
 
-const requestAudio = () => {
-  audioUnlockRequested = true;
-};
-
-const unlockAudioHard = async () => {
-  requestAudio();
-  if (audioUnlocked) return;
+const tryUnmuteDuringPlayback = async () => {
   if (!bgVideoEl) return;
+  if (!videoSessionActive) return;
+  if (bgVideoEl.paused) return;
 
   bgVideoEl.volume = VIDEO_VOLUME;
 
-  if (!bgVideoEl.paused) {
-    bgVideoEl.muted = false;
-    audioUnlocked = true;
-    return;
-  }
-
   try {
     bgVideoEl.muted = false;
-    await playPromise(bgVideoEl);
-    bgVideoEl.pause();
-    try {
-      bgVideoEl.currentTime = 0;
-    } catch {}
-    audioUnlocked = true;
+    await safePlay(bgVideoEl);
+    await sleep(80);
+    if (!bgVideoEl.paused && !bgVideoEl.muted) return;
+    bgVideoEl.muted = true;
   } catch {
     bgVideoEl.muted = true;
   }
 };
 
-const playOnceFull = (video) =>
+const waitEndedOrTimeout = (video, msMax) =>
   new Promise((resolve) => {
     const onEnded = () => resolve(true);
     video.addEventListener("ended", onEnded, { once: true });
-
-    try {
-      video.currentTime = 0;
-    } catch {}
-
-    try {
-      const p = video.play();
-      if (p && p.catch) {
-        p.catch(() => {
-          resolve(false);
-        });
-      }
-    } catch {
-      resolve(false);
-    }
+    setTimeout(() => resolve(false), msMax);
   });
+
+const playOne = async (video) => {
+  try {
+    video.currentTime = 0;
+  } catch {}
+
+  video.muted = true;
+  video.volume = VIDEO_VOLUME;
+
+  try {
+    await safePlay(video);
+  } catch {
+    return false;
+  }
+
+  if (strongGesture || wantSound) {
+    tryUnmuteDuringPlayback();
+  }
+
+  const msMax = Math.max(4000, Math.floor((video.duration || 13) * 1000 + 2500));
+  await waitEndedOrTimeout(video, msMax);
+  return true;
+};
 
 const playVideoLoopsThenHide = async (loops) => {
   if (!bgVideoEl) return;
 
   await ensureMetadata(bgVideoEl);
 
+  videoSessionActive = true;
+
   if (bgImageEl) bgImageEl.style.display = "none";
   bgVideoEl.style.display = "block";
 
   for (let i = 0; i < loops; i++) {
-    bgVideoEl.volume = VIDEO_VOLUME;
-
-    const trySound = audioUnlocked || audioUnlockRequested;
-
-    if (trySound) {
-      bgVideoEl.muted = false;
-      const ok = await playOnceFull(bgVideoEl);
-      if (ok) {
-        audioUnlocked = true;
-      } else {
-        bgVideoEl.muted = true;
-        await playOnceFull(bgVideoEl);
-      }
-    } else {
-      bgVideoEl.muted = true;
-      await playOnceFull(bgVideoEl);
-    }
+    await playOne(bgVideoEl);
   }
+
+  videoSessionActive = false;
 
   bgVideoEl.pause();
   bgVideoEl.style.display = "none";
@@ -226,6 +237,16 @@ const startVideoCycle = async () => {
   bgVideoEl.style.pointerEvents = "none";
   bgVideoEl.load();
 
+  bgVideoEl.addEventListener("pause", () => {
+    if (!videoSessionActive) return;
+    if (bgVideoEl.ended) return;
+    if (Number.isFinite(bgVideoEl.duration) && bgVideoEl.currentTime >= bgVideoEl.duration - 0.05) return;
+
+    bgVideoEl.muted = true;
+    bgVideoEl.volume = VIDEO_VOLUME;
+    safePlay(bgVideoEl);
+  });
+
   await ensureMetadata(bgVideoEl);
 
   const intervalMs = VIDEO_INTERVAL_MINUTES * 60 * 1000;
@@ -242,12 +263,19 @@ document.addEventListener("contextmenu", (e) => {
   if (e.target && e.target.tagName === "IMG") e.preventDefault();
 });
 
-document.addEventListener("DOMContentLoaded", () => {
+let initialAppliedResolve = null;
+const initialApplied = new Promise((r) => (initialAppliedResolve = r));
+
+document.addEventListener("DOMContentLoaded", async () => {
   bgImageEl = document.getElementById("background-image");
   bgVideoEl = document.getElementById("background-video");
 
-  if (bgImageEl && (!bgImageEl.getAttribute("src") || bgImageEl.getAttribute("src") === "")) {
-    bgImageEl.src = TRANSPARENT_PIXEL;
+  if (bgImageEl) {
+    if (!bgImageEl.getAttribute("src") || bgImageEl.getAttribute("src") === "") {
+      bgImageEl.src = TRANSPARENT_PIXEL;
+    }
+    bgImageEl.style.opacity = "0";
+    bgImageEl.style.transition = "opacity 120ms ease";
   }
 
   if (bgVideoEl) {
@@ -255,10 +283,23 @@ document.addEventListener("DOMContentLoaded", () => {
     bgVideoEl.style.pointerEvents = "none";
   }
 
-  window.addEventListener("mousemove", requestAudio, { once: true });
-  window.addEventListener("pointerdown", unlockAudioHard, { once: true });
-  window.addEventListener("keydown", unlockAudioHard, { once: true });
-  window.addEventListener("touchstart", unlockAudioHard, { once: true });
+  const ok = await applyInitialBackground();
+  initialAppliedResolve(Boolean(ok));
+
+  window.addEventListener("mousemove", () => {
+    wantSound = true;
+    tryUnmuteDuringPlayback();
+  }, { once: true });
+
+  const strong = () => {
+    wantSound = true;
+    strongGesture = true;
+    tryUnmuteDuringPlayback();
+  };
+
+  window.addEventListener("pointerdown", strong, { once: true });
+  window.addEventListener("keydown", strong, { once: true });
+  window.addEventListener("touchstart", strong, { once: true });
 
   try {
     VanillaTilt.init(document.querySelectorAll(".tilt"), {
@@ -284,8 +325,12 @@ window.addEventListener("load", async () => {
   const loading = document.getElementById("loading-screen");
   const main = document.getElementById("main-content");
 
+  const waitBg = Promise.race([initialApplied, sleep(8000)]);
+  const minWait = hasSession ? sleep(0) : sleep(2000);
+
+  await Promise.all([waitBg, minWait]);
+
   const showMain = async () => {
-    await setInitialBackground();
     preloadAllImages();
     scheduleBackgroundUpdates();
 
@@ -300,12 +345,9 @@ window.addEventListener("load", async () => {
     return;
   }
 
-  setTimeout(() => {
-    if (loading) loading.style.transform = "translateY(-100%)";
-    setTimeout(() => {
-      showMain();
-    }, 2000);
-  }, 2000);
+  if (loading) loading.style.transform = "translateY(-100%)";
+  await sleep(2000);
 
+  await showMain();
   localStorage.setItem("hasSession", "1");
 });
