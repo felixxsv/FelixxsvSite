@@ -12,6 +12,42 @@ const bgImages = [
   "img/bg/VRChat_2025-04-27_17-04-30.188_1920x1080.png"
 ];
 
+const bgVideo = document.getElementById("background-video");
+const startTime = 23 * 60 + 53;
+const endTime = 23 * 60 + 55;
+
+bgVideo.src = "video/skull-edit1.2.mp4";
+bgVideo.volume = 1.0;
+
+function startSegmentLoop() {
+  const playNow = () => {
+    if (bgVideo.currentTime < startTime || bgVideo.currentTime >= endTime) {
+      bgVideo.currentTime = startTime;
+    }
+    const p = bgVideo.play();
+    if (p && p.catch) p.catch(() => {});
+  };
+
+  if (bgVideo.readyState >= 1) {
+    playNow();
+  } else {
+    bgVideo.addEventListener("loadedmetadata", playNow, { once: true });
+  }
+}
+
+bgVideo.addEventListener("timeupdate", () => {
+  if (bgVideo.currentTime >= endTime) {
+    bgVideo.currentTime = startTime;
+    const p = bgVideo.play();
+    if (p && p.catch) p.catch(() => {});
+  }
+});
+
+document.addEventListener("click", function handler() {
+  startSegmentLoop();
+  document.removeEventListener("click", handler);
+}, { once: true });
+
 document.addEventListener("contextmenu", (e) => {
   if (e.target && e.target.tagName === "IMG") e.preventDefault();
 });
