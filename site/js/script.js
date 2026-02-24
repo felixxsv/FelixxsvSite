@@ -17,7 +17,7 @@
 
   const VIDEO_SCHEDULES = [
     { time: "4:44", loops: 10 },
-    { time: "0:10", loops: 10 }
+    { time: "0:12", loops: 10 }
   ];
 
   const pseudoRandom = (seed) => {
