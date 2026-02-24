@@ -13,7 +13,7 @@ const bgImages = [
 ];
 
 const VIDEO_SRC = "video/skull-edit1.2.mp4";
-const VIDEO_INTERVAL_MINUTES = 5;
+const VIDEO_INTERVAL_MINUTES = 1;
 const VIDEO_LOOPS = 3;
 const VIDEO_VOLUME = 0.2;
 
