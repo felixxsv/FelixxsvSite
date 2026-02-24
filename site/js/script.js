@@ -12,12 +12,22 @@ const bgImages = [
   "img/bg/VRChat_2025-04-27_17-04-30.188_1920x1080.png"
 ];
 
+document.addEventListener("contextmenu", (e) => {
+  if (e.target && e.target.tagName === "IMG") e.preventDefault();
+});
+
 document.addEventListener("DOMContentLoaded", function () {
   const bgImage = document.getElementById("background-image");
 
   function pseudoRandom(seed) {
     const x = Math.sin(seed * 9973) * 10000;
     return x - Math.floor(x);
+  }
+
+  function preload(src) {
+    const img = new Image();
+    img.src = src;
+    return img;
   }
 
   function updateBackground() {
@@ -28,10 +38,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
     bgImage.classList.add("fade-out");
 
-    setTimeout(() => {
+    const pre = preload(newSrc);
+
+    const apply = () => {
       bgImage.src = newSrc;
       bgImage.classList.remove("fade-out");
-    }, 1000);
+    };
+
+    if (pre.decode) {
+      pre.decode().then(apply).catch(apply);
+    } else {
+      pre.onload = apply;
+      pre.onerror = apply;
+    }
   }
 
   updateBackground();
