@@ -18,17 +18,12 @@ const VIDEO_LOOPS = 3;
 const VIDEO_VOLUME = 0.2;
 
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
-const CROSSFADE_MS = 400;
-const INITIAL_BG_MAX_WAIT_MS = 8000;
 
-let bgImageA = null;
-let bgImageB = null;
-let activeImg = null;
-let idleImg = null;
-
+let bgImageEl = null;
 let bgVideoEl = null;
 
 let audioUnlocked = false;
+let audioUnlockRequested = false;
 let videoCycleStarted = false;
 
 const imageCache = new Map();
@@ -74,87 +69,34 @@ const preloadAllImages = async () => {
   }
 };
 
-const now0 = new Date();
-const initialSlot = quarterSlot(now0);
-const initialSrc = imageBySlot(initialSlot);
-const initialNextSrc = imageBySlot(initialSlot + 1);
-const initialReady = preloadImage(initialSrc);
-preloadImage(initialNextSrc);
+const setInitialBackground = async () => {
+  if (!bgImageEl) return;
 
-const setupBackgroundLayers = () => {
-  const base = document.getElementById("background-image");
-  if (!base) return;
+  const now = new Date();
+  const slot = quarterSlot(now);
+  const current = imageBySlot(slot);
+  const next = imageBySlot(slot + 1);
 
-  if (!base.getAttribute("src")) base.setAttribute("src", TRANSPARENT_PIXEL);
+  await preloadImage(current);
+  bgImageEl.src = current;
 
-  const parent = base.parentElement;
-
-  base.style.position = "absolute";
-  base.style.inset = "0";
-  base.style.opacity = "0";
-  base.style.transition = `opacity ${CROSSFADE_MS}ms ease`;
-  base.style.pointerEvents = "none";
-
-  const clone = base.cloneNode(false);
-  clone.removeAttribute("id");
-  clone.setAttribute("aria-hidden", "true");
-  clone.style.position = "absolute";
-  clone.style.inset = "0";
-  clone.style.opacity = "0";
-  clone.style.transition = `opacity ${CROSSFADE_MS}ms ease`;
-  clone.style.pointerEvents = "none";
-  clone.setAttribute("src", TRANSPARENT_PIXEL);
-
-  if (parent) parent.appendChild(clone);
-
-  bgImageA = base;
-  bgImageB = clone;
-  activeImg = bgImageA;
-  idleImg = bgImageB;
-};
-
-const showInitialBackground = async () => {
-  if (!activeImg) return;
-
-  await initialReady;
-
-  activeImg.src = initialSrc;
-  activeImg.style.opacity = "1";
-  idleImg.style.opacity = "0";
-
-  preloadImage(initialNextSrc);
-};
-
-const crossfadeTo = async (src) => {
-  if (!activeImg || !idleImg) return;
-  if (activeImg.src && activeImg.src.endsWith(src)) return;
-
-  await preloadImage(src);
-
-  idleImg.src = src;
-  idleImg.style.opacity = "0";
-
-  await sleep(0);
-
-  idleImg.style.opacity = "1";
-  activeImg.style.opacity = "0";
-
-  await sleep(CROSSFADE_MS + 20);
-
-  const tmp = activeImg;
-  activeImg = idleImg;
-  idleImg = tmp;
-  idleImg.style.opacity = "0";
+  preloadImage(next);
 };
 
 const updateBackground = async () => {
+  if (!bgImageEl) return;
+
   const now = new Date();
   const slot = quarterSlot(now);
   const current = imageBySlot(slot);
   const next = imageBySlot(slot + 1);
 
   preloadImage(next);
-  await crossfadeTo(current);
+
+  bgImageEl.classList.add("fade-out");
+  await preloadImage(current);
+  bgImageEl.src = current;
+  bgImageEl.classList.remove("fade-out");
 };
 
 const scheduleBackgroundUpdates = () => {
@@ -184,21 +126,25 @@ const playPromise = (video) => {
   return Promise.resolve();
 };
 
-const attemptUnlockAudio = async () => {
+const requestAudio = () => {
+  audioUnlockRequested = true;
+};
+
+const unlockAudioHard = async () => {
+  requestAudio();
   if (audioUnlocked) return;
   if (!bgVideoEl) return;
 
+  bgVideoEl.volume = VIDEO_VOLUME;
+
   if (!bgVideoEl.paused) {
     bgVideoEl.muted = false;
-    bgVideoEl.volume = VIDEO_VOLUME;
     audioUnlocked = true;
     return;
   }
 
-  bgVideoEl.muted = false;
-  bgVideoEl.volume = VIDEO_VOLUME;
-
   try {
+    bgVideoEl.muted = false;
     await playPromise(bgVideoEl);
     bgVideoEl.pause();
     try {
@@ -219,9 +165,15 @@ const playOnceFull = (video) =>
       video.currentTime = 0;
     } catch {}
 
-    const p = video.play();
-    if (p && p.catch) {
-      p.catch(() => resolve(false));
+    try {
+      const p = video.play();
+      if (p && p.catch) {
+        p.catch(() => {
+          resolve(false);
+        });
+      }
+    } catch {
+      resolve(false);
     }
   });
 
@@ -230,18 +182,20 @@ const playVideoLoopsThenHide = async (loops) => {
 
   await ensureMetadata(bgVideoEl);
 
-  if (activeImg) activeImg.style.display = "none";
-  if (idleImg) idleImg.style.display = "none";
-
+  if (bgImageEl) bgImageEl.style.display = "none";
   bgVideoEl.style.display = "block";
 
   for (let i = 0; i < loops; i++) {
     bgVideoEl.volume = VIDEO_VOLUME;
 
-    if (audioUnlocked) {
+    const trySound = audioUnlocked || audioUnlockRequested;
+
+    if (trySound) {
       bgVideoEl.muted = false;
       const ok = await playOnceFull(bgVideoEl);
-      if (!ok) {
+      if (ok) {
+        audioUnlocked = true;
+      } else {
         bgVideoEl.muted = true;
         await playOnceFull(bgVideoEl);
       }
@@ -253,9 +207,7 @@ const playVideoLoopsThenHide = async (loops) => {
 
   bgVideoEl.pause();
   bgVideoEl.style.display = "none";
-
-  if (activeImg) activeImg.style.display = "block";
-  if (idleImg) idleImg.style.display = "block";
+  if (bgImageEl) bgImageEl.style.display = "block";
 };
 
 const startVideoCycle = async () => {
@@ -290,28 +242,23 @@ document.addEventListener("contextmenu", (e) => {
   if (e.target && e.target.tagName === "IMG") e.preventDefault();
 });
 
-document.addEventListener("DOMContentLoaded", async () => {
-  setupBackgroundLayers();
-  await showInitialBackground();
-
+document.addEventListener("DOMContentLoaded", () => {
+  bgImageEl = document.getElementById("background-image");
   bgVideoEl = document.getElementById("background-video");
+
+  if (bgImageEl && (!bgImageEl.getAttribute("src") || bgImageEl.getAttribute("src") === "")) {
+    bgImageEl.src = TRANSPARENT_PIXEL;
+  }
+
   if (bgVideoEl) {
     bgVideoEl.style.display = "none";
     bgVideoEl.style.pointerEvents = "none";
   }
 
-  let lastMoveTry = 0;
-  window.addEventListener("mousemove", () => {
-    const now = Date.now();
-    if (audioUnlocked) return;
-    if (now - lastMoveTry < 700) return;
-    lastMoveTry = now;
-    attemptUnlockAudio();
-  });
-
-  window.addEventListener("pointerdown", attemptUnlockAudio, { once: true });
-  window.addEventListener("keydown", attemptUnlockAudio, { once: true });
-  window.addEventListener("touchstart", attemptUnlockAudio, { once: true });
+  window.addEventListener("mousemove", requestAudio, { once: true });
+  window.addEventListener("pointerdown", unlockAudioHard, { once: true });
+  window.addEventListener("keydown", unlockAudioHard, { once: true });
+  window.addEventListener("touchstart", unlockAudioHard, { once: true });
 
   try {
     VanillaTilt.init(document.querySelectorAll(".tilt"), {
@@ -337,10 +284,8 @@ window.addEventListener("load", async () => {
   const loading = document.getElementById("loading-screen");
   const main = document.getElementById("main-content");
 
-  const waitInitial = Promise.race([initialReady, sleep(INITIAL_BG_MAX_WAIT_MS)]);
-  await waitInitial;
-
   const showMain = async () => {
+    await setInitialBackground();
     preloadAllImages();
     scheduleBackgroundUpdates();
 
